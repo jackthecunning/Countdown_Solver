@@ -9,37 +9,56 @@ import enchant
 
 d = enchant.Dict('en_US')
 
-# Numbers game
+
+def get_components():
+    print("Please enter each number or letter seperated by a space")
+    print("If this is a Numbers game submit answer last")
+
+    comps = input().split(' ')
+    numbers = []
+    letters = []
+    for comp in comps:
+        if comp.isnumeric():
+            numbers.append(int(comp))
+        if len(comp) == 1:
+            letters.append(comp)
+
+    if len(numbers) == 7 and len(letters) == 0:
+        return "numbers_game", numbers
+    elif len(letters) == 9 and len(numbers) == 0:
+        return "letters_game", letters
+    else:
+        print("Since you couldn't follow the rules we'll play a random game.")
+        return "random", ['a']
 
 
 def gen_rand_numbers(small, big):
     answer = random.randint(100, 999)
-    print(answer)
 
     numbers = []
     for j in range(big):
         numbers.append(random.randint(1, 4) * 25)
     for i in range(small):
         numbers.append(random.randint(1, 9))
-    print(numbers)
 
     return answer, numbers
 
 
-def do_math(x1, x2, f):
-    if f == 1:  # add
-        return x1 + x2
-    if f == 2:  # subtract
-        return x1 - x2
-    if f == 3:  # multiply
-        return x1 * x2
-    if f == 4:  # divide
-        return x1 / x2
+def do_math(total, x2, math_function):
+    if math_function == "add":  # add
+        return total + x2
+    if math_function == "subtract":  # subtract
+        return total - x2
+    if math_function == "multiply":  # multiply
+        return total * x2
+    if math_function == "divide":  # divide
+        return total / x2
 
 
 def numbers_game(numbers, answer):
-    x = [1, 2, 3, 4]
-    figs = {1: '+', 2: '-', 3: 'x', 4: '/'}
+    # x = [1, 2, 3, 4]
+    math_functions = ["add", "subtract", "multiply", "divide"]
+    figs = {"add": '+', "subtract": '-', "multiply": 'x', "divide": '/'}
     sol = ""
 
     min_err = answer
@@ -49,27 +68,32 @@ def numbers_game(numbers, answer):
 
     # create permutations for sets between 2 and 6 numbers in size
     for i in range(2, 7):
-        for ps in itertools.permutations(numbers, i):
-            for qs in itertools.product(x, repeat=i - 1):
-                total = ps[0]
+        for perm in itertools.permutations(numbers, i):
 
+            # try different math function between each pair of numbers
+            for qs in itertools.product(math_functions, repeat=i - 1):
+                total = perm[0]
+
+                # Apply math to generate total
                 for s in range(len(qs)):
-                    total = do_math(total, ps[s + 1], qs[s])
+                    total = do_math(total, perm[s + 1], qs[s])
                     if float(total).is_integer() is False:
+                        # You can't play with fractions in Countdown
                         break
 
+                # Update how close to the answer we are getting
                 if abs(total - answer) < min_err:
                     min_err = abs(total - answer)
-                    # min_err = total
                     closest_val = total
-                    min_p = ps
+                    min_p = perm
                     min_q = qs
 
+                # Finally, we've found a matching solution
                 if total == answer:
                     for i in range(len(qs)):
-                        sol = sol + str(ps[i]) + " "
+                        sol = sol + str(perm[i]) + " "
                         sol = sol + figs[qs[i]] + " "
-                    sol = sol + str(ps[len(ps) - 1])
+                    sol = sol + str(perm[len(perm) - 1])
                     return total, sol
 
     for i in range(len(min_q)):
@@ -79,11 +103,20 @@ def numbers_game(numbers, answer):
     return closest_val, sol
 
 
-def play_numbers_game():
-    answer, numbers = gen_rand_numbers(4, 2)
+def play_numbers_game(numbers=[]):
+    if len(numbers) > 0:
+        answer = numbers.pop()
+
+    else:
+        answer, numbers = gen_rand_numbers(4, 2)
     total, solution = numbers_game(numbers, answer)
-    print(int(total), solution)
-    print(abs(answer - int(total)), '\n')
+
+    print('\n')
+    print(f"We played the Numbers game attempting to solve for {answer}.")
+    print(f"We started with numbers {numbers}")
+    print(f"Our answer of {total} is {abs(answer - int(total))} away.")
+    print(solution)
+    print(f"Thats good for {10 - (abs(answer - int(total)))} points!")
 
 
 def gen_rand_letters(cons, vows):
@@ -126,6 +159,7 @@ def letters_game(letters):
     pool.close()
     pool.join()
 
+    # Order our list of solutions. Our longest solution will be first in line.
     solutions = sorted(list(dict.fromkeys(solutions)), key=len, reverse=True)
     return solutions
 
@@ -133,13 +167,29 @@ def letters_game(letters):
 def play_letters_game():
     letters = gen_rand_letters(5, 4)
     answers = letters_game(letters)
-    print(letters)
-    print(answers)
+
+    answer = answers[0]
+    if len(answer) == 9:
+        score = 18
+    else:
+        score = len(answer)
+
+    print('\n')
+    print("*** Letters Game ***")
+    print(f"We were given the letters {letters}")
+    print(f"We found {len(answer)} letter word {answer}")
+    print(f"Thats good for {score} points!")
 
 
 def main():
-    play_numbers_game()
-    play_letters_game()
+    game, components = get_components()
+    if game == "numbers_game":
+        play_numbers_game(components)
+    elif game == "letters_game":
+        play_letters_game(components)
+    else:
+        play_numbers_game()
+        play_letters_game()
 
 
 if __name__ == '__main__':
